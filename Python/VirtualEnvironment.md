@@ -45,3 +45,31 @@ source .venv/Scripts/activate
 PATHを書き換え、
 
 仮想環境内のPythonを利用する。
+
+---
+
+## activateとは
+
+source .venv/Scripts/activate
+
+現在のシェルで仮想環境を有効化する。
+
+実際には
+
+- PATHを書き換える
+- VIRTUAL_ENVを設定する
+- PS1を書き換える
+
+という処理を行っている。
+
+その結果
+
+(.venv)
+
+がプロンプトへ表示される。
+
+## deactivate
+
+deactivate
+
+仮想環境を終了する。
