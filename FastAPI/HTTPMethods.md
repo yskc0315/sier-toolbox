@@ -20,38 +20,55 @@ POST /tasks
 
 データを取得する。
 
-例）
+例
 
-GET /tasks
-
-特徴
-
-・サーバの状態を変更しない
-・一覧取得や詳細取得に使用する
+```python
+@app.get("/tasks")
+```
 
 ---
 
 ## POST
 
-新しいデータを登録する。
+新しいデータを作成する。
 
-例）
+例
 
-POST /tasks
-
-特徴
-
-・サーバの状態を変更する
-・JSONなどのデータを送信する
+```python
+@app.post("/tasks")
+```
 
 ---
 
-## まとめ
+## PUT
 
-GET：取得
+既存のデータを更新する。
 
-POST：登録
+例
 
-PUT：更新
+```python
+@app.put("/tasks/{task_id}")
+```
 
-DELETE：削除
+---
+
+## DELETE
+
+既存のデータを削除する。
+
+例
+
+```python
+@app.delete("/tasks/{task_id}")
+```
+
+---
+
+## CRUDとの対応
+
+| 操作 | HTTP |
+|------|------|
+| Create | POST |
+| Read | GET |
+| Update | PUT |
+| Delete | DELETE |
