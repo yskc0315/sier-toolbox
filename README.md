@@ -11,6 +11,8 @@
 ## ディレクトリ
 
 - Git
-- Linux
+- Database
+- Design
+- OS
 - Python
 - FastAPI
