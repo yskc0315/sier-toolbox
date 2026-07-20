@@ -32,16 +32,6 @@ RDBMS
 engine = create_engine(DATABASE_URL)
 ```
 
-```
-Session
-    │
-    ▼
-Engine
-    │
-    ▼
-SQLite
-```
-
 ---
 
 # Session
@@ -49,13 +39,8 @@ SQLite
 ## Sessionとは
 
 - DB操作を管理するオブジェクト。
-- INSERT・UPDATE・DELETE・SELECTなどの命令を管理する。
-
-```python
-db = SessionLocal()
-```
-
-SessionはEngineへ命令を渡す。
+- INSERT・UPDATE・DELETE・SELECTの命令を管理する。
+- 変更内容を保持し、`commit()`でDBへ反映する。
 
 ```
 Python
@@ -64,25 +49,23 @@ Session
     │
 Engine
     │
-SQLite
+Database
 ```
 
 ---
 
-## SessionLocal()
+## SessionLocal
 
 ```python
 SessionLocal = sessionmaker(bind=engine)
 ```
 
-- Sessionを生成するためのクラス（工場）。
+- Sessionを生成するためのファクトリ。
 - `SessionLocal()`を呼ぶたびに新しいSessionが生成される。
 
 ```python
 db = SessionLocal()
 ```
-
-FastAPIでも、基本的には1リクエストごとに新しいSessionを生成する。
 
 ---
 
@@ -94,17 +77,7 @@ FastAPIでも、基本的には1リクエストごとに新しいSessionを生�
 Base = declarative_base()
 ```
 
-- SQLAlchemyへ「このクラスをテーブルとして扱う」ことを示すための基底クラス。
-
----
-
-## Task
-
-```python
-class Task(Base):
-```
-
-- Baseを継承したクラスはテーブルとして扱われる。
+- SQLAlchemyへ「このクラスをテーブルとして扱う」ことを示す基底クラス。
 
 ---
 
@@ -124,9 +97,7 @@ __tablename__ = "tasks"
 id = Column(Integer, primary_key=True)
 ```
 
-Columnはテーブルの列（カラム）を表す。
-
----
+テーブルのカラムを定義する。
 
 ### Integer
 
@@ -151,7 +122,7 @@ True  = 1
 
 ---
 
-### primary_key=True
+## primary_key=True
 
 主キーを表す。
 
@@ -165,7 +136,7 @@ Base.metadata.create_all(bind=engine)
 
 ### Base
 
-テーブルとして扱うクラスを管理している。
+テーブルとして扱うクラスを管理する。
 
 ### metadata
 
@@ -181,88 +152,47 @@ metadataを基にテーブルを作成する。
 
 ---
 
-# Create（INSERT）
+# CRUD
 
-## INSERTの流れ
+## Create（INSERT）
 
 ```python
-db = SessionLocal()
-
-task = Task(
-    title="勉強",
-    difficulty=3,
-    completed=False,
-    exp=100
-)
+task = Task(...)
 
 db.add(task)
-
 db.commit()
-
 db.close()
 ```
 
----
+### Task()
 
-## Task()
+Taskオブジェクト（1レコード）を生成する。
 
-Taskオブジェクト（＝1レコード）を生成する。
-
-まだDBへ保存されない。
-
----
-
-## add()
-
-```python
-db.add(task)
-```
+### add()
 
 Sessionへ登録する。
 
-この時点ではDBアクセスは行われない。
+この時点ではDBへ保存されない。
 
----
-
-## commit()
-
-```python
-db.commit()
-```
+### commit()
 
 Sessionの内容をDBへ反映する。
 
-トランザクションを確定する。
+INSERT文が実行される。
+
+### rollback()
+
+commit前の変更を取り消す。
+
+### close()
+
+Sessionを終了し、DB接続を解放する。
 
 ---
 
-## rollback()
+## Read（SELECT）
 
-```python
-db.rollback()
-```
-
-commit前であれば変更を取り消せる。
-
-commit後は取り消せない。
-
----
-
-## close()
-
-```python
-db.close()
-```
-
-Sessionを終了する。
-
-DB接続を解放する。
-
----
-
-# Read（SELECT）
-
-## query()
+### query()
 
 ```python
 db.query(Task)
@@ -274,13 +204,13 @@ Taskクラスに対応するテーブルを検索対象とするQueryを作成�
 
 ---
 
-## all()
+### all()
 
 ```python
 tasks = db.query(Task).all()
 ```
 
-Queryを実行する。
+Queryを実行し、全件取得する。
 
 戻り値
 
@@ -298,7 +228,7 @@ list[Task]
 
 ---
 
-## first()
+### first()
 
 ```python
 task = db.query(Task).first()
@@ -318,52 +248,60 @@ Task
 None
 ```
 
-ORDER BYを書かない限り、どのレコードが返るかは保証されない。
-
 ---
 
-## filter()
+### filter()
 
 ```python
 db.query(Task).filter(Task.id == 1)
 ```
 
-WHERE句を追加する。
+SQLのWHERE句に相当する。
 
 ```python
 Task.id == 1
 ```
 
-はTrue/Falseではなく、
+はTrue/Falseではなく、WHERE句を構築するための条件オブジェクトを生成する。
 
-WHERE句を生成するための条件オブジェクトである。
-
----
-
-## ORMの考え方
-
-Taskは
-
-- PythonではTaskクラス
-- SQLAlchemyではtasksテーブル
-
-を表す。
-
-そのため
+複数条件は
 
 ```python
-db.query(Task)
+.filter(
+    Task.completed == False,
+    Task.difficulty >= 3
+)
 ```
 
-は
-
-「tasksテーブルを検索する」
-
-という意味になる。
+のように記述でき、SQLではAND条件となる。
 
 ---
 
-## all()とfirst()の違い
+### order_by()
+
+昇順
+
+```python
+.order_by(Task.difficulty)
+```
+
+```sql
+ORDER BY difficulty ASC
+```
+
+降順
+
+```python
+.order_by(Task.difficulty.desc())
+```
+
+```sql
+ORDER BY difficulty DESC
+```
+
+---
+
+### all()とfirst()の違い
 
 | メソッド | 戻り値 | データなし |
 |----------|--------|-----------|
@@ -372,7 +310,7 @@ db.query(Task)
 
 ---
 
-## Noneの扱い
+### Noneの扱い
 
 ```python
 task = db.query(Task).filter(Task.id == 999).first()
@@ -392,56 +330,85 @@ task is None
 task.title
 ```
 
-とすると
+を実行すると
 
 ```
 AttributeError
 ```
 
-となる。
+が発生する。
 
-そのため
+---
+
+## Update（UPDATE）
 
 ```python
-if task is None:
-    ...
+task = db.query(Task).filter(Task.id == 1).first()
+
+task.completed = True
+task.exp = 300
+
+db.commit()
 ```
 
-で判定する。
+### ポイント
+
+- `update()`メソッドは使用しない。
+- Sessionが変更を検知（Change Tracking）する。
+- `commit()`時にUPDATE文が自動生成される。
+- 複数項目を変更しても、通常は1回のUPDATE文で反映される。
+
+---
+
+## Delete（DELETE）
+
+```python
+task = db.query(Task).filter(Task.id == 1).first()
+
+db.delete(task)
+
+db.commit()
+```
+
+### ポイント
+
+- `delete()`ではSessionへ削除予定として登録するだけ。
+- `commit()`でDELETE文が実行される。
+- `commit()`しなければDBから削除されない。
 
 ---
 
 # SQLAlchemyの全体像
 
 ```
-Python
-
 Taskオブジェクト
         │
         ▼
 Session
+（変更内容を管理）
+        │
+commit()
         │
         ▼
 Engine
         │
         ▼
-SQLite（PostgreSQL）
+Database
 ```
 
-FastAPIを導入すると
+SessionはDBへ直接命令するのではなく、**オブジェクトの状態（追加・更新・削除）を管理し、`commit()`時にEngine経由でDBへ反映する。**
 
-```
-Browser
-        │
-        ▼
-FastAPI
-        │
-        ▼
-Session
-        │
-        ▼
-Engine
-        │
-        ▼
-SQLite（PostgreSQL）
-```
+---
+
+# SQLとSQLAlchemyの対応
+
+| SQLAlchemy | SQL |
+|------------|-----|
+| `query(Task)` | `SELECT * FROM tasks` |
+| `filter(Task.id == 1)` | `WHERE id = 1` |
+| `order_by(Task.id)` | `ORDER BY id ASC` |
+| `order_by(Task.id.desc())` | `ORDER BY id DESC` |
+| `add()` | `INSERT` |
+| 値を書き換える | `UPDATE` |
+| `delete()` | `DELETE` |
+| `commit()` | トランザクション確定・DBへ反映 |
